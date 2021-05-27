@@ -1,34 +1,14 @@
-/* Heltec Automation I2C scanner example (also it's a basic example how to use I2C1)
- *
- * ESP32 have two I2C (I2C0 and I2C1) bus
- *
- * OLED is connected to I2C0, so if scan with Wire (I2C0), the return address should be 0x3C.
- *
- * If you need scan other device address in I2C1...
- *		- Comment all Wire.***() codes;
- * 		- Uncomment all Wire1.***() codes;
- *
- * I2C scan example and I2C0
- *
- * HelTec AutoMation, Chengdu, China
- * 成都惠利特自动化科技有限公司
- * www.heltec.org
- *
- * this project also realess in GitHub:
- * https://github.com/HelTecAutomation/Heltec_ESP32
- * */
-
 #include "Arduino.h"
 #include "heltec.h"
 #include <Adafruit_BMP280.h>
 
-#define FPS 25
+#define FPS 20
 #define MSL_PRESSURE 1019
 #define BARO_FACT 10000
 
 Adafruit_BMP280 bmp = Adafruit_BMP280(&Wire1);
 
-uint8_t values[128];
+float values[128];
 uint8_t valuePointer = 0;
 
 float temperature;
@@ -40,16 +20,16 @@ float baro_hi = 0;
 u_long now;
 u_long refreshSpan = 1000 / FPS;
 u_long lastRefresh;
-u_long measureSpan = 10000;
+u_long measureSpan = 2500;
 u_long lastMeasure;
 
 void setup()
 {
   Heltec.begin(true, false, true);
-  Wire1.begin(SDA, SCL); //If there have other device on I2C1, scan the device address via I2C1
-  bmp.begin(0x76);
+  Wire1.begin(SDA, SCL);
+  bmp.begin(BMP280_ADDRESS_ALT);
   bmp.setSampling(Adafruit_BMP280::MODE_NORMAL,     /* Operating Mode. */
-                  Adafruit_BMP280::SAMPLING_X2,     /* Temp. oversampling */
+                  Adafruit_BMP280::SAMPLING_X4,     /* Temp. oversampling */
                   Adafruit_BMP280::SAMPLING_X16,    /* Pressure oversampling */
                   Adafruit_BMP280::FILTER_X16,      /* Filtering. */
                   Adafruit_BMP280::STANDBY_MS_500); /* Standby time. */
@@ -76,20 +56,21 @@ void loop()
       if (pressure < baro_lo)
         baro_lo = pressure;
       if (pressure > baro_hi)
-        baro_hi = pressure; 
+        baro_hi = pressure;
 
-      values[valuePointer %= 128] = map(pressure * BARO_FACT, baro_lo * BARO_FACT, baro_hi * BARO_FACT, 0, 127);
+      values[valuePointer %= 127] = pressure;
       valuePointer++;
       lastMeasure = now;
     }
-    Heltec.display->drawString(0, 0, "Temperatur: " + String(temperature, 1) + "°C");
-    Heltec.display->drawString(0, 10, "Luftdruck: " + String(pressure, 3) + "hPa");
-    Heltec.display->drawString(0, 20, "Höhe: " + String(altitude, 2) + "m");
-    Heltec.display->drawRect(0, 59, 128, 5);
-    Heltec.display->fillRect(0, 60, 128 * (now - lastMeasure) / measureSpan, 4);
+    Heltec.display->drawString(0, 0, String(pressure, 4) + "hPa, " + String(altitude, 2) + "m");
+    Heltec.display->drawRect(0, 61, 128, 3);
+    Heltec.display->fillRect(0, 62, 128 * (now - lastMeasure) / measureSpan, 1);
+    Heltec.display->drawString(0, 10, String(baro_hi, 4));
+    Heltec.display->drawString(0, 49, String(baro_lo, 4));
     for (uint8_t i = 0; i < 128; i++)
     {
-      Heltec.display->drawVerticalLine(i, 32, 25 * values[i] / 127);
+      //float value = values[i];
+      //uint8_t temp = ((baro_hi - value) / (baro_hi - baro_lo)) * 127;
     }
     Heltec.display->display();
     lastRefresh = now;
