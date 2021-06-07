@@ -3,7 +3,7 @@
 #include <Adafruit_BMP280.h>
 
 #define FPS 20
-#define MSL_PRESSURE 1019
+#define MSL_PRESSURE 1022.1
 #define BARO_FACT 10000
 
 Adafruit_BMP280 bmp = Adafruit_BMP280(&Wire1);
@@ -20,7 +20,7 @@ float baro_hi = 0;
 u_long now;
 u_long refreshSpan = 1000 / FPS;
 u_long lastRefresh;
-u_long measureSpan = 2500;
+u_long measureSpan = 1500;
 u_long lastMeasure;
 
 void setup()
@@ -65,12 +65,14 @@ void loop()
     Heltec.display->drawString(0, 0, String(pressure, 4) + "hPa, " + String(altitude, 2) + "m");
     Heltec.display->drawRect(0, 61, 128, 3);
     Heltec.display->fillRect(0, 62, 128 * (now - lastMeasure) / measureSpan, 1);
-    Heltec.display->drawString(0, 10, String(baro_hi, 4));
-    Heltec.display->drawString(0, 49, String(baro_lo, 4));
+    Heltec.display->drawString(0, 10, "H: " + String(baro_hi, 3) + ", L: " + String(baro_lo, 3));
+    Heltec.display->drawLine(valuePointer, 21, valuePointer, 60);
     for (uint8_t i = 0; i < 128; i++)
     {
-      //float value = values[i];
-      //uint8_t temp = ((baro_hi - value) / (baro_hi - baro_lo)) * 127;
+      float value = values[i];
+      uint8_t temp = ((baro_hi - value) / (baro_hi - baro_lo)) * 40;
+      Heltec.display->setPixel(i, 21);
+      Heltec.display->setPixel(i, 21 + temp);
     }
     Heltec.display->display();
     lastRefresh = now;
